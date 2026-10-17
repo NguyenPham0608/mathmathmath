@@ -105,6 +105,7 @@
   .done { text-align: center; }
   .done .label { font-size: 2rem; color: #6b7385; }
   .done .score { font-size: min(20vw, 14vh); font-weight: 700; line-height: 1.1; }
+  .done .overall { font-size: 1.6rem; color: #6b7385; margin-top: 12px; }
   .done button { margin-top: 24px; }
 
   .feedback { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; padding: 0 16px; }
@@ -137,6 +138,7 @@
   let score = 0;           // questions answered right on the first try
   let missedThis = false;  // wrong try on the current question
   let ended = false;
+  let overall = loadOverall();  // all sessions, kept in this browser
   let deadline = null;
   let totalMs = 0;
   let ticker = null;
@@ -243,9 +245,28 @@
     return `${current.a} ${sign} ${current.b}`;
   }
 
+  function loadOverall() {
+    try {
+      return JSON.parse(localStorage.getItem("mathOverall")) || { right: 0, total: 0 };
+    } catch (e) {
+      return { right: 0, total: 0 };
+    }
+  }
+
+  function saveOverall() {
+    try {
+      localStorage.setItem("mathOverall", JSON.stringify(overall));
+    } catch (e) {
+      // storage unavailable; overall score just won't persist
+    }
+  }
+
   // Called when a question is finished (answered right, or time ran out)
   function resolve(rightFirstTry) {
     if (rightFirstTry) score++;
+    overall.total++;
+    if (rightFirstTry) overall.right++;
+    saveOverall();
     done++;
     if (done >= SESSION) {
       endSession();
@@ -271,6 +292,7 @@
       <div class="done">
         <div class="label">Score</div>
         <div class="score">${score} / ${SESSION}</div>
+        <div class="overall">Overall: ${overall.right} / ${overall.total}</div>
         <button id="again">Play again</button>
       </div>`;
     $("again").onclick = newSession;
