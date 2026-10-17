@@ -54,6 +54,8 @@
   }
   .limit input:focus { outline: none; }
 
+  .progress { font-size: 1.6rem; color: #6b7385; margin-bottom: 12px; min-height: 2rem; }
+
   /* Countdown bar pinned to the bottom of the screen */
   .timerbar {
     position: fixed;
@@ -99,6 +101,12 @@
     padding: 0;
   }
   input[type="text"]:focus { outline: none; }
+
+  .done { text-align: center; }
+  .done .label { font-size: 2rem; color: #6b7385; }
+  .done .score { font-size: min(20vw, 14vh); font-weight: 700; line-height: 1.1; }
+  .done button { margin-top: 24px; }
+
   .feedback { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; padding: 0 16px; }
   .good { color: #22a06b; }
   .bad { color: #e5484d; }
@@ -113,6 +121,7 @@
   </label>
 </div>
 
+<div class="progress" id="progress"></div>
 <div class="problem" id="problem"></div>
 <div class="feedback" id="feedback"></div>
 
@@ -121,8 +130,13 @@
 <script>
   const MAX = 10;          // largest number in a problem
   const MAX_SECONDS = 10;  // largest time limit
+  const SESSION = 20;      // questions per session
   let mode = "mul";
   let current = null;
+  let done = 0;            // questions finished this session
+  let score = 0;           // questions answered right on the first try
+  let missedThis = false;  // wrong try on the current question
+  let ended = false;
   let deadline = null;
   let totalMs = 0;
   let ticker = null;
@@ -186,21 +200,21 @@
     return Math.min(v, MAX_SECONDS);
   }
 
-  function startTimer() {
+  function stopTimer() {
     cancelAnimationFrame(ticker);
+    deadline = null;
+    $("timerbar").classList.remove("on");
+  }
+
+  function startTimer() {
+    stopTimer();
     const limit = getLimit();
-    const bar = $("timerbar");
-    const fill = $("fill");
-    if (!limit) {
-      deadline = null;
-      bar.classList.remove("on");
-      return;
-    }
+    if (!limit) return;
     totalMs = limit * 1000;
     deadline = Date.now() + totalMs;
-    bar.classList.add("on");
-    fill.classList.remove("low");
-    fill.style.width = "100%";
+    $("timerbar").classList.add("on");
+    $("fill").classList.remove("low");
+    $("fill").style.width = "100%";
     ticker = requestAnimationFrame(tick);
   }
 
@@ -217,11 +231,11 @@
   }
 
   function timeUp() {
-    cancelAnimationFrame(ticker);
+    stopTimer();
     const fb = $("feedback");
     fb.className = "feedback bad";
     fb.textContent = `Time's up! ${questionText()} = ${current.answer}`;
-    next();
+    resolve(false);
   }
 
   function questionText() {
@@ -229,21 +243,59 @@
     return `${current.a} ${sign} ${current.b}`;
   }
 
+  // Called when a question is finished (answered right, or time ran out)
+  function resolve(rightFirstTry) {
+    if (rightFirstTry) score++;
+    done++;
+    if (done >= SESSION) {
+      endSession();
+    } else {
+      next();
+    }
+  }
+
   function next() {
     current = makeQuestion();
+    missedThis = false;
+    $("progress").textContent = `${done + 1} / ${SESSION}`;
     renderProblem();
     startTimer();
   }
 
+  function endSession() {
+    ended = true;
+    stopTimer();
+    $("progress").textContent = "";
+    $("feedback").textContent = "";
+    $("problem").innerHTML = `
+      <div class="done">
+        <div class="label">Score</div>
+        <div class="score">${score} / ${SESSION}</div>
+        <button id="again">Play again</button>
+      </div>`;
+    $("again").onclick = newSession;
+    $("again").focus();
+  }
+
+  function newSession() {
+    ended = false;
+    done = 0;
+    score = 0;
+    $("feedback").textContent = "";
+    next();
+  }
+
   function check() {
+    if (!current) return;
     const raw = $("answer").value.trim();
     if (raw === "") return;
     const fb = $("feedback");
     if (Number(raw) === current.answer) {
       fb.className = "feedback good";
       fb.textContent = "Correct!";
-      next();
+      resolve(!missedThis);
     } else {
+      missedThis = true;
       fb.className = "feedback bad";
       fb.textContent = `Not quite. ${questionText()} = ${current.answer}`;
       $("answer").value = "";
@@ -255,8 +307,7 @@
     mode = m;
     $("tabMul").classList.toggle("on", m === "mul");
     $("tabDiv").classList.toggle("on", m === "div");
-    $("feedback").textContent = "";
-    next();
+    newSession();
   }
 
   // Keep the seconds box to digits, max 10; changing it restarts the bar
@@ -264,13 +315,18 @@
     const limitBox = $("limit");
     limitBox.value = limitBox.value.replace(/[^0-9]/g, "").slice(0, 2);
     if (Number(limitBox.value) > MAX_SECONDS) limitBox.value = String(MAX_SECONDS);
-    if (current) startTimer();
+    if (current && !ended) startTimer();
+  });
+
+  // Enter starts a new session from the score screen
+  document.addEventListener("keydown", (e) => {
+    if (ended && e.key === "Enter") newSession();
   });
 
   $("tabMul").onclick = () => setMode("mul");
   $("tabDiv").onclick = () => setMode("div");
 
-  next();
+  newSession();
 </script>
 </body>
 </html>
