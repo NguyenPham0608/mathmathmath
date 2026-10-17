@@ -17,7 +17,18 @@
     background: #f5f7fb;
     color: #1d2433;
   }
-  .row { display: flex; gap: 12px; justify-content: center; position: absolute; top: 16px; }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    padding: 0 16px;
+  }
   button {
     border: 2px solid #4f6ef7;
     background: #fff;
@@ -29,6 +40,39 @@
     cursor: pointer;
   }
   button.on { background: #4f6ef7; color: #fff; }
+  .limit { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
+  .limit input {
+    width: 3.5em;
+    font: inherit;
+    font-size: 1.4rem;
+    text-align: center;
+    padding: 10px;
+    border: 2px solid #4f6ef7;
+    border-radius: 12px;
+    background: #fff;
+    color: #1d2433;
+  }
+  .limit input:focus { outline: none; }
+
+  /* Countdown bar pinned to the bottom of the screen */
+  .timerbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 18px;
+    background: #dfe4f0;
+    display: none;
+  }
+  .timerbar.on { display: block; }
+  .timerbar div {
+    height: 100%;
+    width: 100%;
+    background: #4f6ef7;
+    transition: background 0.3s;
+  }
+  .timerbar div.low { background: #e5484d; }
+
   .problem {
     font-size: min(24vw, 16vh);
     font-weight: 700;
@@ -55,7 +99,7 @@
     padding: 0;
   }
   input[type="text"]:focus { outline: none; }
-  .feedback { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; }
+  .feedback { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; padding: 0 16px; }
   .good { color: #22a06b; }
   .bad { color: #e5484d; }
 </style>
@@ -64,15 +108,24 @@
 <div class="row">
   <button id="tabMul" class="on">Times</button>
   <button id="tabDiv">Division</button>
+  <label class="limit">Seconds
+    <input id="limit" type="text" value="10" autocomplete="off" aria-label="Seconds per answer, max 10">
+  </label>
 </div>
 
 <div class="problem" id="problem"></div>
 <div class="feedback" id="feedback"></div>
 
+<div class="timerbar" id="timerbar"><div id="fill"></div></div>
+
 <script>
-  const MAX = 10;
+  const MAX = 10;          // largest number in a problem
+  const MAX_SECONDS = 10;  // largest time limit
   let mode = "mul";
   let current = null;
+  let deadline = null;
+  let totalMs = 0;
+  let ticker = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -125,9 +178,61 @@
     $("answer").focus();
   }
 
+  // Returns the time limit in seconds, or 0 for no limit
+  function getLimit() {
+    const raw = $("limit").value.trim();
+    const v = Number(raw);
+    if (raw === "" || !(v >= 1)) return 0;
+    return Math.min(v, MAX_SECONDS);
+  }
+
+  function startTimer() {
+    cancelAnimationFrame(ticker);
+    const limit = getLimit();
+    const bar = $("timerbar");
+    const fill = $("fill");
+    if (!limit) {
+      deadline = null;
+      bar.classList.remove("on");
+      return;
+    }
+    totalMs = limit * 1000;
+    deadline = Date.now() + totalMs;
+    bar.classList.add("on");
+    fill.classList.remove("low");
+    fill.style.width = "100%";
+    ticker = requestAnimationFrame(tick);
+  }
+
+  function tick() {
+    const leftMs = Math.max(0, deadline - Date.now());
+    const fill = $("fill");
+    fill.style.width = (leftMs / totalMs * 100) + "%";
+    fill.classList.toggle("low", leftMs <= 3000);
+    if (leftMs <= 0) {
+      timeUp();
+    } else {
+      ticker = requestAnimationFrame(tick);
+    }
+  }
+
+  function timeUp() {
+    cancelAnimationFrame(ticker);
+    const fb = $("feedback");
+    fb.className = "feedback bad";
+    fb.textContent = `Time's up! ${questionText()} = ${current.answer}`;
+    next();
+  }
+
+  function questionText() {
+    const sign = mode === "mul" ? "×" : "÷";
+    return `${current.a} ${sign} ${current.b}`;
+  }
+
   function next() {
     current = makeQuestion();
     renderProblem();
+    startTimer();
   }
 
   function check() {
@@ -140,8 +245,7 @@
       next();
     } else {
       fb.className = "feedback bad";
-      const sign = mode === "mul" ? "×" : "÷";
-      fb.textContent = `Not quite. ${current.a} ${sign} ${current.b} = ${current.answer}`;
+      fb.textContent = `Not quite. ${questionText()} = ${current.answer}`;
       $("answer").value = "";
       $("answer").focus();
     }
@@ -154,6 +258,14 @@
     $("feedback").textContent = "";
     next();
   }
+
+  // Keep the seconds box to digits, max 10; changing it restarts the bar
+  $("limit").addEventListener("input", () => {
+    const limitBox = $("limit");
+    limitBox.value = limitBox.value.replace(/[^0-9]/g, "").slice(0, 2);
+    if (Number(limitBox.value) > MAX_SECONDS) limitBox.value = String(MAX_SECONDS);
+    if (current) startTimer();
+  });
 
   $("tabMul").onclick = () => setMode("mul");
   $("tabDiv").onclick = () => setMode("div");
