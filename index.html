@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Times Tables & Division</title>
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: #f5f7fb;
+    color: #1d2433;
+  }
+  .row { display: flex; gap: 12px; justify-content: center; position: absolute; top: 16px; }
+  button {
+    border: 2px solid #4f6ef7;
+    background: #fff;
+    color: #4f6ef7;
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-size: 1.6rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.on { background: #4f6ef7; color: #fff; }
+  .problem {
+    font-size: min(24vw, 16vh);
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    line-height: 1.1;
+  }
+  .stack { display: inline-flex; flex-direction: column; align-items: flex-end; }
+  .stack .line { display: flex; align-items: center; gap: 0.25em; }
+  .stack .op { width: 0.6em; text-align: center; }
+  .bar { width: 100%; height: 0.08em; background: #1d2433; border-radius: 2px; margin: 0.06em 0; }
+  .frac { display: inline-flex; align-items: center; gap: 0.3em; }
+  .frac .col { display: flex; flex-direction: column; text-align: center; min-width: 1.4em; }
+  input[type="text"] {
+    width: 2.6em;
+    font: inherit;
+    font-weight: 700;
+    text-align: center;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: #1d2433;
+    padding: 0;
+  }
+  input[type="text"]:focus { outline: none; }
+  .feedback { position: absolute; bottom: 24px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; }
+  .good { color: #22a06b; }
+  .bad { color: #e5484d; }
+</style>
+</head>
+<body>
+<div class="row">
+  <button id="tabMul" class="on">Times</button>
+  <button id="tabDiv">Division</button>
+</div>
+
+<div class="problem" id="problem"></div>
+<div class="feedback" id="feedback"></div>
+
+<script>
+  const MAX = 10;
+  let mode = "mul";
+  let current = null;
+
+  const $ = (id) => document.getElementById(id);
+
+  function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function makeQuestion() {
+    const x = randInt(1, MAX);
+    const y = randInt(1, MAX);
+    if (mode === "mul") return { a: x, b: y, answer: x * y };
+    // division: dividend = x * y, so it always divides evenly
+    return { a: x * y, b: x, answer: y };
+  }
+
+  function makeInput() {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = "answer";
+    input.autocomplete = "off";
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^0-9]/g, "");
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") check();
+    });
+    return input;
+  }
+
+  function renderProblem() {
+    const box = $("problem");
+    box.innerHTML = "";
+    if (mode === "mul") {
+      box.innerHTML = `
+        <div class="stack">
+          <div class="line"><span>${current.a}</span></div>
+          <div class="line"><span class="op">×</span><span>${current.b}</span></div>
+          <div class="bar"></div>
+          <div class="line"><span class="answer-slot"></span></div>
+        </div>`;
+      box.querySelector(".answer-slot").appendChild(makeInput());
+    } else {
+      box.innerHTML = `
+        <div class="frac">
+          <div class="col"><span>${current.a}</span><div class="bar"></div><span>${current.b}</span></div>
+          <span>=</span>
+        </div>`;
+      box.querySelector(".frac").appendChild(makeInput());
+    }
+    $("answer").focus();
+  }
+
+  function next() {
+    current = makeQuestion();
+    renderProblem();
+  }
+
+  function check() {
+    const raw = $("answer").value.trim();
+    if (raw === "") return;
+    const fb = $("feedback");
+    if (Number(raw) === current.answer) {
+      fb.className = "feedback good";
+      fb.textContent = "Correct!";
+      next();
+    } else {
+      fb.className = "feedback bad";
+      const sign = mode === "mul" ? "×" : "÷";
+      fb.textContent = `Not quite. ${current.a} ${sign} ${current.b} = ${current.answer}`;
+      $("answer").value = "";
+      $("answer").focus();
+    }
+  }
+
+  function setMode(m) {
+    mode = m;
+    $("tabMul").classList.toggle("on", m === "mul");
+    $("tabDiv").classList.toggle("on", m === "div");
+    $("feedback").textContent = "";
+    next();
+  }
+
+  $("tabMul").onclick = () => setMode("mul");
+  $("tabDiv").onclick = () => setMode("div");
+
+  next();
+</script>
+</body>
+</html>
