@@ -17,44 +17,125 @@
     background: #f5f7fb;
     color: #1d2433;
   }
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
-    top: 16px;
-    left: 0;
-    right: 0;
-    padding: 0 16px;
-  }
   button {
     border: 2px solid #4f6ef7;
     background: #fff;
     color: #4f6ef7;
     border-radius: 12px;
     padding: 14px 24px;
+    font-family: inherit;
     font-size: 1.6rem;
     font-weight: 600;
     cursor: pointer;
   }
   button.on { background: #4f6ef7; color: #fff; }
-  .limit { font-size: 1.4rem; display: flex; align-items: center; gap: 8px; }
-  .limit input {
-    width: 3.5em;
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .icon-btn {
+    width: 56px;
+    height: 56px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .menu-btn { position: fixed; top: 16px; left: 16px; z-index: 5; }
+
+  /* Settings panel, slides in from the left */
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 35, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+  }
+  .backdrop.open { opacity: 1; pointer-events: auto; }
+  .panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(360px, 88vw);
+    box-sizing: border-box;
+    padding: 20px 24px 32px;
+    background: #fff;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    z-index: 11;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.35s;
+  }
+  .panel.open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+  }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; }
+  .panel-head h2 { margin: 0; font-size: 1.6rem; }
+  .panel-head .icon-btn { width: 44px; height: 44px; border: none; }
+  .setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 1.15rem; }
+  .setting.col { flex-direction: column; align-items: stretch; gap: 0; }
+  .setting-label { font-weight: 600; }
+  .seg { display: flex; gap: 8px; }
+  .seg button { width: 56px; height: 56px; padding: 0; font-size: 2.2rem; line-height: 1; }
+  #voice.on .slash { display: none; }
+  .field { display: flex; align-items: center; gap: 8px; }
+  .field input {
+    width: 3.6em;
     font: inherit;
-    font-size: 1.4rem;
     text-align: center;
-    padding: 10px;
+    padding: 8px;
     border: 2px solid #4f6ef7;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fff;
     color: #1d2433;
   }
-  .limit input:focus { outline: none; }
+  .field input:focus { outline: 3px solid rgba(79, 110, 247, 0.3); }
 
-  .progress { font-size: 1.6rem; color: #6b7385; margin-bottom: 12px; min-height: 2rem; }
+  /* Difficulty slider: green to red, knob takes the color under it */
+  #difficulty {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 14px;
+    margin: 18px 0 8px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #22c55e, #84cc16, #eab308, #f97316, #ef4444);
+    cursor: pointer;
+    outline: none;
+  }
+  #difficulty::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 6px solid var(--thumb, #ef4444);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s ease;
+  }
+  #difficulty:active::-webkit-slider-thumb { transform: scale(1.15); }
+  #difficulty::-moz-range-track {
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(to right, #22c55e, #84cc16, #eab308, #f97316, #ef4444);
+  }
+  #difficulty::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    border: 6px solid var(--thumb, #ef4444);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+  #difficulty:focus-visible { box-shadow: 0 0 0 4px rgba(79, 110, 247, 0.3); }
 
   /* Countdown bar pinned to the bottom of the screen */
   .timerbar {
@@ -83,65 +164,114 @@
     align-items: center;
     line-height: 1.1;
   }
-  .stack { display: inline-flex; flex-direction: column; align-items: flex-end; }
+  /* Column layout: digits line up on the right, answer goes under the bar */
+  .stack { display: inline-flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
   .stack .line { display: flex; align-items: center; gap: 0.25em; }
   .stack .op { width: 0.6em; text-align: center; }
   .bar { width: 100%; height: 0.08em; background: #1d2433; border-radius: 2px; margin: 0.06em 0; }
-  .frac { display: inline-flex; align-items: center; gap: 0.3em; }
-  .frac .col { display: flex; flex-direction: column; text-align: center; min-width: 1.4em; }
-  input[type="text"] {
-    width: 2.6em;
+  #answer {
+    width: 1ch;
+    height: 1.1em;
     font: inherit;
     font-weight: 700;
-    text-align: center;
+    text-align: right;
     border: none;
     border-radius: 0;
     background: transparent;
     color: #1d2433;
     padding: 0;
   }
-  input[type="text"]:focus { outline: none; }
+  #answer:focus { outline: none; }
+  #answer.good { color: #22a06b; }
+  #answer.bad { color: #e5484d; }
+  .mark { color: #e5484d; display: flex; justify-content: center; }
+  .fix { color: #22a06b; }
 
   .done { text-align: center; }
   .done .label { font-size: 2rem; color: #6b7385; }
   .done .score { font-size: min(20vw, 14vh); font-weight: 700; line-height: 1.1; }
   .done .overall { font-size: 1.6rem; color: #6b7385; margin-top: 12px; }
   .done button { margin-top: 24px; }
-
-  .feedback { position: absolute; bottom: 40px; left: 0; right: 0; text-align: center; min-height: 2.5rem; font-size: 2rem; font-weight: 700; padding: 0 16px; }
-  .good { color: #22a06b; }
-  .bad { color: #e5484d; }
 </style>
 </head>
 <body>
-<div class="row">
-  <button id="tabMul" class="on">Times</button>
-  <button id="tabDiv">Division</button>
-  <label class="limit">Seconds
-    <input id="limit" type="text" value="10" autocomplete="off" aria-label="Seconds per answer, max 10">
-  </label>
-</div>
+<button class="icon-btn menu-btn" id="menuBtn" aria-label="Settings" aria-expanded="false" aria-controls="panel" title="Settings (Esc)">
+  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+    <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+  </svg>
+</button>
 
-<div class="progress" id="progress"></div>
+<div class="backdrop" id="backdrop"></div>
+
+<aside class="panel" id="panel" aria-label="Settings">
+  <div class="panel-head">
+    <h2>Settings</h2>
+    <button class="icon-btn" id="closeBtn" aria-label="Close settings" title="Close (Esc)">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 5 8 12 15 19"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="setting">
+    <span class="setting-label">Operation</span>
+    <div class="seg">
+      <button id="tabMul" class="on" aria-label="Multiplication" aria-pressed="true">×</button>
+      <button id="tabDiv" aria-label="Division" aria-pressed="false">÷</button>
+    </div>
+  </div>
+
+  <div class="setting">
+    <span class="setting-label">Voice answers</span>
+    <button class="icon-btn" id="voice" aria-label="Voice answers" aria-pressed="false" title="Voice answers off">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+        <line x1="12" y1="18" x2="12" y2="22"/>
+        <line class="slash" x1="3" y1="3" x2="21" y2="21"/>
+      </svg>
+    </button>
+  </div>
+
+  <label class="setting">
+    <span class="setting-label">Problem time limit</span>
+    <span class="field"><input id="limit" type="text" value="10" autocomplete="off" title="Seconds, 1 to 10. Empty for no limit."></span>
+  </label>
+
+  <label class="setting">
+    <span class="setting-label">Session length</span>
+    <span class="field"><input id="count" type="text" value="20" autocomplete="off" title="Questions per session, 1 to 100"></span>
+  </label>
+
+  <div class="setting col">
+    <label class="setting-label" for="difficulty">Difficulty</label>
+    <input type="range" id="difficulty" min="2" max="10" step="any" value="10">
+  </div>
+</aside>
+
 <div class="problem" id="problem"></div>
-<div class="feedback" id="feedback"></div>
 
 <div class="timerbar" id="timerbar"><div id="fill"></div></div>
 
 <script>
-  const MAX = 10;          // largest number in a problem
   const MAX_SECONDS = 10;  // largest time limit
-  const SESSION = 20;      // questions per session
+  const MAX_SESSION = 100; // largest session length
+  let maxNumber = 10;      // largest number in a problem, set by the difficulty slider
+  let sessionLength = 20;  // questions per session
   let mode = "mul";
   let current = null;
   let done = 0;            // questions finished this session
   let score = 0;           // questions answered right on the first try
-  let missedThis = false;  // wrong try on the current question
+  let locked = false;      // showing right/wrong before moving on
+  let waiting = false;     // wrong answer shown; Enter moves on
   let ended = false;
+  let endedAt = 0;         // when the score screen appeared
   let overall = loadOverall();  // all sessions, kept in this browser
   let deadline = null;
   let totalMs = 0;
   let ticker = null;
+  let pausedLeft = null;   // ms left on the bar while settings are open
+  let panelOpen = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -150,8 +280,8 @@
   }
 
   function makeQuestion() {
-    const x = randInt(1, MAX);
-    const y = randInt(1, MAX);
+    const x = randInt(1, maxNumber);
+    const y = randInt(1, maxNumber);
     if (mode === "mul") return { a: x, b: y, answer: x * y };
     // division: dividend = x * y, so it always divides evenly
     return { a: x * y, b: x, answer: y };
@@ -164,6 +294,7 @@
     input.autocomplete = "off";
     input.addEventListener("input", () => {
       input.value = input.value.replace(/[^0-9]/g, "");
+      fitAnswer();
     });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") check();
@@ -171,27 +302,27 @@
     return input;
   }
 
+  // Answer box is exactly as wide as its digits, so it lines up under the numbers
+  function fitAnswer() {
+    const input = $("answer");
+    input.style.width = `calc(${Math.max(1, input.value.length)}ch + 0.05em)`;
+  }
+
+  // Both modes use the same column: first number, sign and second number,
+  // bar, then the answer right under it
   function renderProblem() {
+    const sign = mode === "mul" ? "×" : "÷";
     const box = $("problem");
-    box.innerHTML = "";
-    if (mode === "mul") {
-      box.innerHTML = `
-        <div class="stack">
-          <div class="line"><span>${current.a}</span></div>
-          <div class="line"><span class="op">×</span><span>${current.b}</span></div>
-          <div class="bar"></div>
-          <div class="line"><span class="answer-slot"></span></div>
-        </div>`;
-      box.querySelector(".answer-slot").appendChild(makeInput());
-    } else {
-      box.innerHTML = `
-        <div class="frac">
-          <div class="col"><span>${current.a}</span><div class="bar"></div><span>${current.b}</span></div>
-          <span>=</span>
-        </div>`;
-      box.querySelector(".frac").appendChild(makeInput());
-    }
-    $("answer").focus();
+    box.innerHTML = `
+      <div class="stack">
+        <div class="line"><span>${current.a}</span></div>
+        <div class="line"><span class="op">${sign}</span><span>${current.b}</span></div>
+        <div class="bar"></div>
+        <div class="line" id="answerLine"><span class="op mark" id="mark"></span></div>
+      </div>`;
+    $("answerLine").appendChild(makeInput());
+    // Don't pull focus out of the settings panel while it's open
+    if (!panelOpen) $("answer").focus();
   }
 
   // Returns the time limit in seconds, or 0 for no limit
@@ -205,6 +336,7 @@
   function stopTimer() {
     cancelAnimationFrame(ticker);
     deadline = null;
+    pausedLeft = null;
     $("timerbar").classList.remove("on");
   }
 
@@ -217,6 +349,21 @@
     $("timerbar").classList.add("on");
     $("fill").classList.remove("low");
     $("fill").style.width = "100%";
+    if (panelOpen) pauseTimer();
+    else ticker = requestAnimationFrame(tick);
+  }
+
+  // Hold the bar where it is while settings are open
+  function pauseTimer() {
+    if (deadline === null || pausedLeft !== null) return;
+    cancelAnimationFrame(ticker);
+    pausedLeft = Math.max(0, deadline - Date.now());
+  }
+
+  function resumeTimer() {
+    if (pausedLeft === null) return;
+    deadline = Date.now() + pausedLeft;
+    pausedLeft = null;
     ticker = requestAnimationFrame(tick);
   }
 
@@ -233,16 +380,32 @@
   }
 
   function timeUp() {
-    stopTimer();
-    const fb = $("feedback");
-    fb.className = "feedback bad";
-    fb.textContent = `Time's up! ${questionText()} = ${current.answer}`;
-    resolve(false);
+    finish(false);
   }
 
-  function questionText() {
-    const sign = mode === "mul" ? "×" : "÷";
-    return `${current.a} ${sign} ${current.b}`;
+  // Show the result. Right: answer turns green, then move on.
+  // Wrong: keep the typed answer in red with an X, put the correct answer
+  // on the line below, and wait for Enter.
+  function finish(right) {
+    locked = true;
+    stopTimer();
+    const q = current;
+    const input = $("answer");
+    input.readOnly = true;
+    if (right) {
+      input.classList.add("good");
+      setTimeout(() => {
+        if (current === q) resolve(true);  // skip if settings started a new session
+      }, 300);
+    } else {
+      input.classList.add("bad");
+      $("mark").innerHTML = `
+        <svg viewBox="0 0 24 24" width="0.55em" height="0.55em" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" aria-label="Wrong">
+          <line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>
+        </svg>`;
+      $("answerLine").insertAdjacentHTML("afterend", `<div class="line fix">${q.answer}</div>`);
+      waiting = true;
+    }
   }
 
   function loadOverall() {
@@ -268,7 +431,7 @@
     if (rightFirstTry) overall.right++;
     saveOverall();
     done++;
-    if (done >= SESSION) {
+    if (done >= sessionLength) {
       endSession();
     } else {
       next();
@@ -277,8 +440,9 @@
 
   function next() {
     current = makeQuestion();
-    missedThis = false;
-    $("progress").textContent = `${done + 1} / ${SESSION}`;
+    locked = false;
+    waiting = false;
+    skipHeard();
     renderProblem();
     startTimer();
   }
@@ -286,53 +450,77 @@
   function endSession() {
     ended = true;
     stopTimer();
-    $("progress").textContent = "";
-    $("feedback").textContent = "";
     $("problem").innerHTML = `
       <div class="done">
         <div class="label">Score</div>
-        <div class="score">${score} / ${SESSION}</div>
+        <div class="score">${score} / ${sessionLength}</div>
         <div class="overall">Overall: ${overall.right} / ${overall.total}</div>
         <button id="again">Play again</button>
       </div>`;
-    $("again").onclick = newSession;
-    $("again").focus();
+    // Ignore the click from the same Enter press that finished the last question
+    endedAt = Date.now();
+    $("again").onclick = () => {
+      if (Date.now() - endedAt > 500) newSession();
+    };
   }
 
   function newSession() {
     ended = false;
     done = 0;
     score = 0;
-    $("feedback").textContent = "";
     next();
   }
 
   function check() {
-    if (!current) return;
+    if (waiting) {
+      waiting = false;
+      resolve(false);
+      return;
+    }
+    if (!current || locked) return;
     const raw = $("answer").value.trim();
     if (raw === "") return;
-    const fb = $("feedback");
-    if (Number(raw) === current.answer) {
-      fb.className = "feedback good";
-      fb.textContent = "Correct!";
-      resolve(!missedThis);
-    } else {
-      missedThis = true;
-      fb.className = "feedback bad";
-      fb.textContent = `Not quite. ${questionText()} = ${current.answer}`;
-      $("answer").value = "";
-      $("answer").focus();
-    }
+    finish(Number(raw) === current.answer);
   }
 
   function setMode(m) {
     mode = m;
     $("tabMul").classList.toggle("on", m === "mul");
     $("tabDiv").classList.toggle("on", m === "div");
+    $("tabMul").setAttribute("aria-pressed", String(m === "mul"));
+    $("tabDiv").setAttribute("aria-pressed", String(m === "div"));
+    refreshVoiceHints();
     newSession();
   }
 
-  // Keep the seconds box to digits, max 10; changing it restarts the bar
+  // Settings panel
+  function setPanel(open) {
+    panelOpen = open;
+    $("panel").classList.toggle("open", open);
+    $("backdrop").classList.toggle("open", open);
+    $("menuBtn").setAttribute("aria-expanded", String(open));
+    if (open) {
+      pauseTimer();
+      $("closeBtn").focus();
+    } else {
+      resumeTimer();
+      const target = $("answer") || $("again");
+      if (target) target.focus();
+    }
+  }
+
+  // Session length box: digits only, 1 to 100; changing it starts a new session
+  $("count").addEventListener("input", () => {
+    const box = $("count");
+    box.value = box.value.replace(/[^0-9]/g, "").slice(0, 3);
+    const v = Number(box.value);
+    if (box.value === "" || v < 1) return;
+    if (v > MAX_SESSION) box.value = String(MAX_SESSION);
+    sessionLength = Math.min(v, MAX_SESSION);
+    newSession();
+  });
+
+  // Time limit box: digits only, max 10; changing it restarts the bar
   $("limit").addEventListener("input", () => {
     const limitBox = $("limit");
     limitBox.value = limitBox.value.replace(/[^0-9]/g, "").slice(0, 2);
@@ -340,14 +528,334 @@
     if (current && !ended) startTimer();
   });
 
-  // Enter starts a new session from the score screen
-  document.addEventListener("keydown", (e) => {
-    if (ended && e.key === "Enter") newSession();
+  // Difficulty slider: moves smoothly, settles on a whole number (2 to 10)
+  const slider = $("difficulty");
+  const GRADIENT = [[34, 197, 94], [132, 204, 22], [234, 179, 8], [249, 115, 22], [239, 68, 68]];
+  let sliderAnim = null;
+
+  // Color at t (0 to 1) along the track's gradient, so the knob matches what's under it
+  function gradientColor(t) {
+    const pos = Math.min(Math.max(t, 0), 1) * (GRADIENT.length - 1);
+    const i = Math.min(Math.floor(pos), GRADIENT.length - 2);
+    const f = pos - i;
+    const rgb = GRADIENT[i].map((v, k) => Math.round(v + (GRADIENT[i + 1][k] - v) * f));
+    return `rgb(${rgb.join(", ")})`;
+  }
+
+  function paintSlider() {
+    const v = Number(slider.value);
+    const t = (v - Number(slider.min)) / (Number(slider.max) - Number(slider.min));
+    slider.style.setProperty("--thumb", gradientColor(t));
+  }
+
+  // Glide the knob to a value instead of jumping
+  function glideSlider(to) {
+    cancelAnimationFrame(sliderAnim);
+    const from = Number(slider.value);
+    const start = performance.now();
+    const step = (now) => {
+      const k = Math.min(1, (now - start) / 160);
+      slider.value = from + (to - from) * (1 - Math.pow(1 - k, 3));
+      paintSlider();
+      if (k < 1) sliderAnim = requestAnimationFrame(step);
+    };
+    sliderAnim = requestAnimationFrame(step);
+  }
+
+  function setDifficulty(n) {
+    if (n === maxNumber) return;
+    maxNumber = n;
+    refreshVoiceHints();
+    newSession();
+  }
+
+  slider.addEventListener("input", () => {
+    cancelAnimationFrame(sliderAnim);
+    paintSlider();
+  });
+  slider.addEventListener("change", () => {
+    const n = Math.round(Number(slider.value));
+    glideSlider(n);
+    setDifficulty(n);
+  });
+  // Arrow keys move one whole step
+  slider.addEventListener("keydown", (e) => {
+    const step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const n = Math.min(Math.max(Math.round(Number(slider.value)) + step, Number(slider.min)), Number(slider.max));
+    glideSlider(n);
+    setDifficulty(n);
   });
 
+  // Voice answers: say the number and it is entered and checked.
+  const ONES = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
+    "eighteen", "nineteen"];
+  const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  // Words the recognizer often writes in place of a number
+  const SOUNDS_LIKE = {
+    won: 1, to: 2, too: 2, tu: 2, tree: 3, free: 3, for: 4, fore: 4,
+    sicks: 6, ate: 8, fourty: 40
+  };
+  const NUMBER_WORDS = new Map([
+    ...ONES.map((w, n) => [w, n]),
+    ...TENS.map((w, n) => [w, n * 10]).filter(([w]) => w),
+    ...Object.entries(SOUNDS_LIKE),
+  ]);
+
+  // 54 -> "fifty four"
+  function numberWords(n) {
+    if (n === 100) return "one hundred";
+    if (n < 20) return ONES[n];
+    return TENS[Math.floor(n / 10)] + (n % 10 ? " " + ONES[n % 10] : "");
+  }
+
+  // Every answer the current settings can produce; given to the recognizer as hints
+  function possibleAnswers() {
+    const answers = new Set();
+    for (let x = 1; x <= maxNumber; x++) {
+      if (mode === "div") answers.add(x);
+      else for (let y = 1; y <= maxNumber; y++) answers.add(x * y);
+    }
+    return [...answers];
+  }
+
+  // More speech could still turn this into a different number:
+  // "six" -> "sixteen" or "sixty", "twenty" -> "twenty four"
+  function couldGrow(n) {
+    return n < 10 || (n >= 20 && n < 100 && n % 10 === 0);
+  }
+
+  // Every number in the text, in order: "20 for" -> [24], "one hundred" -> [100]
+  function numbersIn(text) {
+    const found = [];
+    let cur = null;
+    const flush = () => {
+      if (cur !== null) found.push(cur);
+      cur = null;
+    };
+    for (const tok of text.toLowerCase().split(/[^a-z0-9]+/)) {
+      if (!tok) continue;
+      if (tok === "hundred") {
+        cur = (cur !== null && cur < 10 ? cur : 1) * 100;
+        continue;
+      }
+      const v = /^\d+$/.test(tok) ? Number(tok) : NUMBER_WORDS.get(tok);
+      if (v === undefined) {
+        flush();
+      } else if (cur !== null && cur >= 20 && cur < 100 && cur % 10 === 0 && v < 10) {
+        cur += v;  // "twenty five" -> 25
+      } else {
+        flush();
+        cur = v;
+      }
+    }
+    flush();
+    return found;
+  }
+
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceLang = /^en\b/i.test(navigator.language) ? navigator.language : "en-US";
+  let voiceOn = false;
+  let recognizer = null;
+  let useLocal = false;      // on-device recognition: faster, and accepts number hints
+  let hintsOK = true;        // false if the recognizer refuses number hints
+  let skipBefore = 0;        // results before this index are used up or stale
+  let resultCount = 0;       // results heard so far in this listen
+  let pendingMatch = null;   // short wait before accepting a mid-sentence match
+  let restartDelay = 0;
+
+  function updateVoiceButton() {
+    const btn = $("voice");
+    btn.classList.toggle("on", voiceOn);
+    btn.setAttribute("aria-pressed", String(voiceOn));
+    btn.title = voiceOn ? "Voice answers on" : "Voice answers off";
+  }
+
+  function setupVoice() {
+    if (!SpeechRec) {
+      $("voice").disabled = true;
+      $("voice").title = "Voice answers need Chrome, Edge or Safari";
+      return;
+    }
+    recognizer = new SpeechRec();
+    recognizer.continuous = true;
+    recognizer.interimResults = true;  // react while still speaking, not after a pause
+    recognizer.maxAlternatives = 5;    // check the recognizer's other guesses too
+    recognizer.onresult = onVoiceResult;
+    recognizer.onstart = () => {
+      skipBefore = 0;
+      resultCount = 0;
+    };
+    // Keep listening until voice is turned off
+    recognizer.onend = () => {
+      if (voiceOn) setTimeout(startListening, restartDelay);
+      restartDelay = 0;
+    };
+    recognizer.onerror = (e) => {
+      if (e.error === "aborted" || e.error === "no-speech") return;
+      if (e.error === "phrases-not-supported") {
+        hintsOK = false;
+      } else if (useLocal) {
+        useLocal = false;  // on-device failed: fall back to the regular recognizer
+      } else if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        voiceOn = false;
+        updateVoiceButton();
+      } else {
+        restartDelay = 1000;  // network or mic trouble: don't retry in a tight loop
+      }
+    };
+  }
+
+  // Settings take effect when listening (re)starts
+  function configureRecognizer() {
+    recognizer.lang = voiceLang;
+    if ("processLocally" in recognizer) recognizer.processLocally = useLocal;
+    if ("phrases" in recognizer && window.SpeechRecognitionPhrase) {
+      recognizer.phrases = useLocal && hintsOK
+        ? possibleAnswers().flatMap((n) => [
+            new SpeechRecognitionPhrase(String(n), 3),
+            new SpeechRecognitionPhrase(numberWords(n), 3),
+          ])
+        : [];
+    }
+  }
+
+  // Switch to on-device recognition if the browser has it, downloading it if needed
+  async function tryLocal() {
+    if (!SpeechRec.available || !("processLocally" in recognizer)) return;
+    const opts = { langs: [voiceLang], processLocally: true };
+    try {
+      let status = await SpeechRec.available(opts);
+      if (status === "downloadable" || status === "downloading") {
+        if (await SpeechRec.install(opts)) status = "available";
+      }
+      if (status === "available" && voiceOn && !useLocal) {
+        useLocal = true;
+        recognizer.abort();  // onend restarts it on-device
+      }
+    } catch (e) {
+      // keep using the regular recognizer
+    }
+  }
+
+  // New mode or difficulty: restart so the number hints match
+  function refreshVoiceHints() {
+    if (voiceOn && useLocal && recognizer) recognizer.abort();
+  }
+
+  function onVoiceResult(e) {
+    resultCount = e.results.length;
+    clearTimeout(pendingMatch);
+    // Nothing is being asked right now, so what's heard now can't count later
+    if (ended || !current || panelOpen || locked) {
+      skipBefore = resultCount;
+      return;
+    }
+    for (let i = Math.max(e.resultIndex, skipBefore); i < e.results.length; i++) {
+      if (useResult(e.results[i], i)) return;
+    }
+  }
+
+  // Reads one result; returns true once it has answered the question
+  function useResult(result, index) {
+    const guesses = [];
+    for (let j = 0; j < result.length; j++) {
+      const nums = numbersIn(result[j].transcript);
+      if (nums.length) guesses.push(nums[nums.length - 1]);
+    }
+    if (!guesses.length) return false;
+
+    const answer = current.answer;
+    if (guesses.includes(answer)) {
+      // Right. Mid-sentence, wait a moment only if "six" could still become "sixteen".
+      if (result.isFinal || !couldGrow(answer)) {
+        answerByVoice(answer, index);
+        return true;
+      }
+      pendingMatch = setTimeout(() => answerByVoice(answer, index), 250);
+      return false;
+    }
+    if (result.isFinal) {
+      answerByVoice(guesses[0], index);
+      return true;
+    }
+    $("answer").value = String(guesses[0]);  // show what's being heard
+    fitAnswer();
+    return false;
+  }
+
+  function answerByVoice(n, index) {
+    if (ended || !current || panelOpen || locked) return;
+    skipBefore = Math.max(skipBefore, index + 1);  // this speech is used up
+    $("answer").value = String(n);
+    fitAnswer();
+    check();
+  }
+
+  // Ignore everything heard so far, so speech from one question can't
+  // answer the next. Listening keeps running, so nothing said next is lost.
+  function skipHeard() {
+    clearTimeout(pendingMatch);
+    skipBefore = resultCount;
+  }
+
+  function startListening() {
+    if (!voiceOn) return;
+    try {
+      configureRecognizer();
+    } catch (e) {
+      hintsOK = false;
+    }
+    try {
+      recognizer.start();
+    } catch (e) {
+      // already listening
+    }
+  }
+
+  function toggleVoice() {
+    voiceOn = !voiceOn;
+    clearTimeout(pendingMatch);
+    if (voiceOn) {
+      startListening();
+      tryLocal();
+    } else {
+      recognizer.abort();
+    }
+    updateVoiceButton();
+  }
+
+  document.addEventListener("keydown", (e) => {
+    // Esc opens and closes the settings panel
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setPanel(!panelOpen);
+      return;
+    }
+    // Enter starts a new session from the score screen. Only when nothing is
+    // focused: the same Enter press that finishes the last question must not
+    // skip past the score, and Enter on the button clicks it anyway.
+    if (ended && e.key === "Enter" && e.target === document.body && Date.now() - endedAt > 500) {
+      newSession();
+    }
+    // Enter moves on from a wrong answer even if the answer box lost focus
+    // (when it has focus, its own Enter handler already does this)
+    if (waiting && !panelOpen && e.key === "Enter" && e.target === document.body) {
+      check();
+    }
+  });
+
+  $("menuBtn").onclick = () => setPanel(true);
+  $("closeBtn").onclick = () => setPanel(false);
+  $("backdrop").onclick = () => setPanel(false);
   $("tabMul").onclick = () => setMode("mul");
   $("tabDiv").onclick = () => setMode("div");
+  $("voice").onclick = toggleVoice;
 
+  paintSlider();
+  setupVoice();
   newSession();
 </script>
 </body>
