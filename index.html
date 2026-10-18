@@ -593,10 +593,20 @@
     "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen",
     "eighteen", "nineteen"];
   const TENS = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
-  // Words the recognizer often writes in place of a number
+  // Words the recognizer often writes in place of a number, mostly when a
+  // short one like "six" is said on its own
   const SOUNDS_LIKE = {
-    won: 1, to: 2, too: 2, tu: 2, tree: 3, free: 3, for: 4, fore: 4,
-    sicks: 6, ate: 8, fourty: 40
+    won: 1, wan: 1, juan: 1,
+    to: 2, too: 2, tu: 2,
+    tree: 3, free: 3,
+    for: 4, fore: 4, forth: 4, fourth: 4,
+    fine: 5, fife: 5, fifth: 5,
+    sicks: 6, sics: 6, sick: 6, sex: 6, sixth: 6,
+    seventh: 7,
+    ate: 8, eighth: 8,
+    nein: 9, ninth: 9,
+    tin: 10, then: 10, tenth: 10,
+    fourty: 40
   };
   const NUMBER_WORDS = new Map([
     ...ONES.map((w, n) => [w, n]),
@@ -621,10 +631,14 @@
     return [...answers];
   }
 
-  // More speech could still turn this into a different number:
-  // "six" -> "sixteen" or "sixty", "twenty" -> "twenty four"
+  // More speech could still turn this into a different possible answer:
+  // "six" -> "sixteen" or "sixty", "twenty" -> "twenty four", "one" -> "one hundred".
+  // Division answers stop at 10, so none of them can.
   function couldGrow(n) {
-    return n < 10 || (n >= 20 && n < 100 && n % 10 === 0);
+    return possibleAnswers().some((m) =>
+      n === 1 ? m === 100
+      : n < 10 ? m === n + 10 || Math.floor(m / 10) === n
+      : n >= 20 && n % 10 === 0 && m > n && m < n + 10);
   }
 
   // Every number in the text, in order: "20 for" -> [24], "one hundred" -> [100]
@@ -661,8 +675,9 @@
   let recognizer = null;
   let useLocal = false;      // on-device recognition: faster, and accepts number hints
   let hintsOK = true;        // false if the recognizer refuses number hints
-  let skipBefore = 0;        // results before this index are used up or stale
-  let resultCount = 0;       // results heard so far in this listen
+  let heard = null;          // the latest results from the recognizer
+  let usedResult = 0;        // results before this index are used up or stale,
+  let usedNums = 0;          // and so are this many numbers at the start of that one
   let pendingMatch = null;   // short wait before accepting a mid-sentence match
   let restartDelay = 0;
 
@@ -685,8 +700,9 @@
     recognizer.maxAlternatives = 5;    // check the recognizer's other guesses too
     recognizer.onresult = onVoiceResult;
     recognizer.onstart = () => {
-      skipBefore = 0;
-      resultCount = 0;
+      heard = null;
+      usedResult = 0;
+      usedNums = 0;
     };
     // Keep listening until voice is turned off
     recognizer.onend = () => {
@@ -746,23 +762,24 @@
   }
 
   function onVoiceResult(e) {
-    resultCount = e.results.length;
+    heard = e.results;
     clearTimeout(pendingMatch);
     // Nothing is being asked right now, so what's heard now can't count later
     if (ended || !current || panelOpen || locked) {
-      skipBefore = resultCount;
+      useUpTo(heard.length - 1);
       return;
     }
-    for (let i = Math.max(e.resultIndex, skipBefore); i < e.results.length; i++) {
-      if (useResult(e.results[i], i)) return;
+    for (let i = Math.max(e.resultIndex, usedResult); i < heard.length; i++) {
+      if (useResult(heard[i], i)) return;
     }
   }
 
   // Reads one result; returns true once it has answered the question
   function useResult(result, index) {
+    const skip = index === usedResult ? usedNums : 0;
     const guesses = [];
     for (let j = 0; j < result.length; j++) {
-      const nums = numbersIn(result[j].transcript);
+      const nums = numbersIn(result[j].transcript).slice(skip);
       if (nums.length) guesses.push(nums[nums.length - 1]);
     }
     if (!guesses.length) return false;
@@ -777,7 +794,9 @@
       pendingMatch = setTimeout(() => answerByVoice(answer, index), 250);
       return false;
     }
-    if (result.isFinal) {
+    // A number no question here has as its answer ("sixty" when dividing) is
+    // a mishearing: show it, but don't mark it wrong
+    if (result.isFinal && possibleAnswers().includes(guesses[0])) {
       answerByVoice(guesses[0], index);
       return true;
     }
@@ -788,17 +807,33 @@
 
   function answerByVoice(n, index) {
     if (ended || !current || panelOpen || locked) return;
-    skipBefore = Math.max(skipBefore, index + 1);  // this speech is used up
+    useUpTo(index);
     $("answer").value = String(n);
     fitAnswer();
     check();
+  }
+
+  // Everything heard so far, up to result `index`, is used up. A result
+  // still in progress stays open: numbers said after this point still count,
+  // so a quick next answer isn't lost if it joins the same result.
+  function useUpTo(index) {
+    if (index < usedResult) return;
+    const result = heard && heard[index];
+    if (!result || result.isFinal) {
+      usedResult = index + 1;
+      usedNums = 0;
+    } else {
+      const count = numbersIn(result[0].transcript).length;
+      usedNums = index === usedResult ? Math.max(usedNums, count) : count;
+      usedResult = index;
+    }
   }
 
   // Ignore everything heard so far, so speech from one question can't
   // answer the next. Listening keeps running, so nothing said next is lost.
   function skipHeard() {
     clearTimeout(pendingMatch);
-    skipBefore = resultCount;
+    if (heard) useUpTo(heard.length - 1);
   }
 
   function startListening() {
